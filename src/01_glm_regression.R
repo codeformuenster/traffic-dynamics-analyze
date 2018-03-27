@@ -4,108 +4,63 @@
 
 # LINEAR GLM REGRESSION MODEL
 
-# TODOs ####
-# TODO: for commuting model, remove public holidays (outliers for weekdays)
-
 # load libraries ####
 # use 00_install_R_packages.R for installing missing packages
-lapply(c("ggplot2", "dplyr", "sjPlot", "nortest", "sqldf"), 
+lapply(c("ggplot2", "dplyr", "RSQLite", "lubridate", "nortest",
+         "fitdistrplus"), 
        require, character.only = TRUE)
 
 # load data ####
-bikes <- read.csv("data/processed/bikes1516.csv")
+con <- dbConnect(SQLite(), dbname = "../data/database/traffic_data.sqlite")
+bikes <- dbGetQuery(conn = con, 
+                    "SELECT 
+                      location, count, date, hour, weather,
+                      temperature, windspeed 
+				 			      FROM bikes WHERE count != ''")
+dbDisconnect(con)
 
 
 # filtering data ####
 # filter data for valid observations
-bikes_filtered <-
+bikes_commuter_neutor <-
   bikes %>%
-  dplyr::select(noOfBikes, location, temp, wind_log, wind, weekday, year, month,
-                hour, rain) %>%
-  filter(location == 'wolbecker', # wind_log != -Inf, #this removes all days without wind (see below)
-         year == 2016,
-         hour == 7) %>%
   # generate factors
-  mutate(rain = as.factor(rain)) %>%
-  mutate(month = as.factor(month)) %>%
-  mutate(weekday = factor(weekday,
-                          levels = c("Mon", "Tues", "Wed", "Thurs", "Fri")))
+  mutate(regen = weather == "Regen") %>% 
+  mutate(weather = as.factor(weather)) %>%
+  mutate(year = year(date)) %>% 
+  mutate(month = as.factor(month(date))) %>%
+  mutate(weekday = as.factor(wday(date, label = TRUE))) %>% 
+  mutate(temperatureC = as.vector(scale(temperature, center = TRUE, scale = FALSE))) %>%
+  mutate(windspeedC = as.vector(scale(windspeed, center = TRUE, scale = FALSE))) %>% 
+  filter(location == 'Neutor',
+         year == 2017,
+         (hour == 7 | hour == 8),
+         (weekday != "Sa" & weekday != "So"))
 
+# data distributions
+bikes_commuter_neutor %>% 
+  # pull(count) %>% 
+  pull(temperatureC) %>%
+  # log() %>% 
+  hist()
 
-nrow(bikes[bikes$location == "wolbecker" & bikes$wind_log == -Inf,])
-nrow(bikes[bikes$location == "wolbecker" & bikes$wind == 0,])
-nrow(bikes[bikes$location == "wolbecker",])
-
+# distribution of target variable
+ad.test(bikes_commuter_neutor$count)
+pearson.test(bikes_commuter_neutor$count)
+ks.test(bikes_commuter_neutor$count, "pnorm")
 
 # fit model ####
 # linear regression
 fit <-
-  glm(noOfBikes ~ temp + wind + weekday + month + rain,
-     data = bikes_filtered)
+  glm(count ~ temperatureC + log(windspeed + 0.001) + regen + month,
+     data = bikes_commuter_neutor)
+fit %>% summary
+fit %>% summary
 
 # analyze residuals ####
 fit %>%
   resid() %>%
   ad.test() # not perfect, yet
-
 plot(fit)
 
 
-# analyze coefficients ####
-fit$coefficients %>%
-  data.frame()
-# predictions compared to data
-sjp.glm(fit, type = "pred", vars = c("rain"))
-sjp.glm(fit, type = "pred", vars = c("weekday"))
-# marginal effects
-sjp.glm(fit, type = "eff")
-
-
-# CARS ----
-# load data
-wolbecker <-
-  sqldf("SELECT
-         date, hour, count, location,
-         CASE location
-           WHEN 'MQ_09040_FV3_G (MQ1034)' THEN 'entering_city'
-           WHEN 'MQ_09040_FV1_G (MQ1033)' THEN 'leaving_city'
-           END 'direction'
-         FROM car_data
-         WHERE location LIKE '%09040%'",
-        dbname = "data/database/kfz_data.sqlite")
-
-temporal_features <-
-  sqldf("SELECT * FROM temporal_features",
-        dbname = "data/database/kfz_data.sqlite")
-
-wolbecker2 <-
-  sqldf("SELECT *
-        FROM wolbecker
-        LEFT JOIN temporal_features
-          ON (wolbecker.date == temporal_features.date
-          AND wolbecker.hour == temporal_features.hour)") %>%
-  setNames(make.names(names(.), unique = T))  # makes column names unique
-
-# linear regression
-fit2 <-
-  wolbecker2 %>%
-  dplyr::select(date, temp, wind_log, weekday, month,
-                count, hour, count, weekend, direction, rain) %>%
-  filter(direction == 'entering_city') %>%
-  filter(hour >= 7 & hour <= 8) %>%
-  filter(weekend == FALSE) %>%
-  filter(complete.cases(.)) %>%
-  filter(wind_log != -Inf) %>%
-  mutate(month = as.factor(month)) %>%
-  mutate(weekday = as.factor(weekday)) %>%
-  glm(count ~ rain + temp + wind_log + weekday + month,
-      data = .)
-
-fit2$coefficients %>%
-  data.frame()
-
-# predictions compared to data
-sjp.glm(fit2, type = "pred", vars = c("rain"))
-sjp.glm(fit2, type = "pred", vars = c("weekday"))
-# marginal effects
-sjp.glm(fit2, type = "eff")
