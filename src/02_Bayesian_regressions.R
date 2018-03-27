@@ -15,8 +15,8 @@ noOfCores = parallel::detectCores()
 # this assumes the script is called from the root directory of the repository
 con <- dbConnect(SQLite(), dbname = "../data/database/traffic_data.sqlite")
 bikes <- dbGetQuery(conn = con, 
-					 paste0("SELECT location, count, date, hour, weather, temperature, windspeed 
-					 			 FROM bikes WHERE count != ''"))
+					 "SELECT location, count, date, hour, weather, temperature, windspeed 
+					 			 FROM bikes WHERE count != ''")
 dbDisconnect(con)
 
 # filtering data ####
@@ -28,7 +28,6 @@ bikes_commuter_neutor <-
 	mutate(year = year(date)) %>% 
   mutate(month = as.factor(month(date))) %>%
 	mutate(weekday = as.factor(wday(date, label = TRUE))) %>% 
-                          #levels = c("Mon", "Tues", "Wed", "Thurs", "Fri"))) %>%
   mutate(temperatureC = as.vector(scale(temperature, center = TRUE, scale = FALSE))) %>%
   mutate(windspeedC = as.vector(scale(windspeed, center = TRUE, scale = FALSE))) %>% 
 	filter(location == 'Neutor',
