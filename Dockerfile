@@ -47,7 +47,7 @@ COPY ./results /srv/shiny-server/results
 
 ## this runs not when building the image but only when starting it:
 # file writing test:
-CMD Rscript -e "source('/srv/shiny-server/src/99_temp_docker_test.R')"
+CMD Rscript -e "source('/srv/shiny-server/src/temp_docker_test.R')"
 
 # computations:
 # CMD Rscript ./src/03_Bayesian_glms.R
