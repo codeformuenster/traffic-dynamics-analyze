@@ -14,9 +14,15 @@ noOfCores = parallel::detectCores()
 # load data
 # this assumes the script is called from the root directory of the repository
 con <- dbConnect(SQLite(), dbname = "../data/database/traffic_data.sqlite")
+# TODO path
 bikes <- dbGetQuery(conn = con, 
 					 "SELECT location, count, date, hour, weather, temperature, windspeed 
 					 			 FROM bikes WHERE count != ''")
+
+cars2 <- dbGetQuery(conn = con, 
+					 "SELECT location, count, date, hour, weather
+					 			 FROM cars WHERE count != ''")
+
 dbDisconnect(con)
 
 # filtering data ####
@@ -25,215 +31,50 @@ bikes_commuter_neutor <-
   bikes %>%
   # generate factors
   mutate(weather = as.factor(weather)) %>%
+  mutate(rain = weather == "Regen") %>% 
 	mutate(year = year(date)) %>% 
   mutate(month = as.factor(month(date))) %>%
 	mutate(weekday = as.factor(wday(date, label = TRUE))) %>% 
   mutate(temperatureC = as.vector(scale(temperature, center = TRUE, scale = FALSE))) %>%
   mutate(windspeedC = as.vector(scale(windspeed, center = TRUE, scale = FALSE))) %>% 
-	filter(location == 'Neutor',
+	filter(!is.na(count),
+	       location == 'Neutor',
          year == 2017,
          (hour == 7 | hour == 8),
-				 (weekday != "Saturday" & weekday != "Sunday"))
+				 (weekday != "Sa" & weekday != "So"))
 
-# Bayesian commuter models
-commuter_model_A =
-  brm(noOfBikes ~ tempC * windC * weekday * month * rain,
-		cores = noOfCores,
-    data = bikes_commuter_wolbecker)
-
-commuter_model_B =
-  brm(noOfBikes ~ tempC * windC * weekday * month + rain,
-		cores = noOfCores,
-    data = bikes_commuter_wolbecker)
-
-commuter_model_C =
-  brm(noOfBikes ~ tempC * windC * weekday + month + rain,
-		cores = noOfCores,
-    data = bikes_commuter_wolbecker)
-
-commuter_model_D =
-  brm(noOfBikes ~ tempC * windC + weekday + month + rain,
-		cores = noOfCores,
-    data = bikes_commuter_wolbecker)
-
-commuter_model_E =
-  brm(noOfBikes ~ tempC + windC + weekday + month + rain,
-		cores = noOfCores,
-    data = bikes_commuter_wolbecker)
-
-commuter_model_F =
-  brm(noOfBikes ~ tempC + windC * weekday * month * rain,
-		cores = noOfCores,
-    data = bikes_commuter_wolbecker)
-
-commuter_model_G =
-  brm(noOfBikes ~ tempC + windC + weekday * month * rain,
-		cores = noOfCores,
-    data = bikes_commuter_wolbecker)
-
-commuter_model_H =
-  brm(noOfBikes ~ tempC + windC + weekday + month * rain,
-		cores = noOfCores,
-    data = bikes_commuter_wolbecker)
-
-commuter_model_I =
-  brm(noOfBikes ~ tempC * windC * rain + weekday + month,
-		cores = noOfCores,
-    data = bikes_commuter_wolbecker)
-
-save(commuter_model_A,
-     commuter_model_B,
-     commuter_model_C,
-     commuter_model_D,
-     commuter_model_E,
-     commuter_model_F,
-     commuter_model_G,
-     commuter_model_H,
-     commuter_model_I,
-     file = "results/Bayesian_commuter_models.RData")
-
-
-## Bayesian regression models
-
-# I have the feeling that exgaussian fits better -- but this should be checked ...
-# hour seems to be not working correct -- gives a weird regression line ...
-
-# TODO: do proper scaling of predictors
-# bikes$hourC = scale(bikes$hour, center = TRUE, scale = FALSE)
-
-## TODO have a look at update.brmsfit -> this might be quicker than re-computing all the time!
-
-#### exgaussian ####
-
-regressionModel_exgaussian_hours =
-	brm(noOfBikes ~ poly(hour,3),
+bike_commuter_model_temperature = 
+	brm(count ~ temperatureC,
 			cores = noOfCores,
-			family = exgaussian,
-			data = bikes)
+			family = mixture(negbinomial, negbinomial),
+			data = bikes_commuter_neutor
+	)
 
-regressionModel_exgaussian_temp =
-	brm(noOfBikes ~ poly(temp, 3),
+bike_commuter_model_temperature_wind = 
+	brm(count ~ temperatureC * windspeedC,
 			cores = noOfCores,
-			family = exgaussian,
-			data = bikes[!(is.na(bikes$temp)), ]) # TODO fix this before fitting the model ...
+			family = mixture(negbinomial, negbinomial),
+			data = bikes_commuter_neutor
+	)
 
-regressionModel_exgaussian_wday =
-	brm(noOfBikes ~ weekday,
+bike_commuter_model_temperature_wind_rain = 
+	brm(count ~ temperatureC * windspeedC * rain,
 			cores = noOfCores,
-			family = exgaussian,
-			data = bikes)
+			family = mixture(negbinomial, negbinomial),
+			data = bikes_commuter_neutor
+	)
 
-regressionModel_exgaussian_wind =
-	brm(noOfBikes ~ wind, # poly is not needed -> the model converges to a straight line
+bike_commuter_model_temperature_wind_rain_weekday = 
+	brm(count ~ temperatureC * windspeedC * rain * weekday,
 			cores = noOfCores,
-			family = exgaussian,
-			data = bikes[!is.na(bikes$wind), ])  # TODO fix this before fitting the model ...
+			family = mixture(negbinomial, negbinomial),
+			data = bikes_commuter_neutor
+	)
 
-regressionModel_exgaussian_weather =
-	brm(noOfBikes ~ weather,
+bike_commuter_model_temperature_wind_weather = 
+	brm(count ~ temperatureC * windspeedC * weather,
 			cores = noOfCores,
-			family = exgaussian,
-			data = bikes)
-
-regressionModel_exgaussian_month =
-	brm(noOfBikes ~ month,
-			cores = noOfCores,
-			family = exgaussian,
-			data = bikes)
-
-regressionModel_exgaussian_year =
-	brm(noOfBikes ~ year,
-			cores = noOfCores,
-			family = exgaussian,
-			data = bikes)
-
-regressionModel_exgaussian_location =
-	brm(noOfBikes ~ location,
-			cores = noOfCores,
-			family = exgaussian,
-			data = bikes)
-
-regressionModel_exgaussian_all =
-	brm(noOfBikes ~ hours * temp * wday * wind * weather * month * year * location,
-			cores = noOfCores,
-			family = exgaussian,
-			data = bikes)
-
-save(regressionModel_exgaussian_hours,
-     regressionModel_exgaussian_temp,
-     regressionModel_exgaussian_wday,
-     regressionModel_exgaussian_wind,
-     regressionModel_exgaussian_weather,
-     regressionModel_exgaussian_month,
-     regressionModel_exgaussian_year,
-     regressionModel_exgaussian_location,
-     regressionModel_exgaussian_all,
-     file = "results/Bayesian_exgaussian_models.RData")
-
-#### negbinomial ####
-
-regressionModel_negbinom_hours =
-	brm(noOfBikes ~ poly(hour,3),
-			cores = noOfCores,
-			family = negbinomial,
-			data = bikes)
-
-regressionModel_negbinom_temp =
-	brm(noOfBikes ~ poly(temp, 3),
-			cores = noOfCores,
-			family = negbinomial,
-			data = bikes[!(is.na(bikes$temp)), ]) # TODO fix this before fitting the model ...
-
-regressionModel_negbinom_wday =
-	brm(noOfBikes ~ weekday,
-			cores = noOfCores,
-			family = negbinomial,
-			data = bikes)
-
-regressionModel_negbinom_wind =
-	brm(noOfBikes ~ wind, # poly is not needed -> the model converges to a straight line
-			cores = noOfCores,
-			family = negbinomial,
-			data = bikes[!is.na(bikes$wind), ])  # TODO fix this before fitting the model ...
-
-regressionModel_negbinom_weather =
-	brm(noOfBikes ~ weather,
-			cores = noOfCores,
-			family = negbinomial,
-			data = bikes)
-
-regressionModel_negbinom_month =
-	brm(noOfBikes ~ month,
-			cores = noOfCores,
-			family = negbinomial,
-			data = bikes)
-
-regressionModel_negbinom_year =
-	brm(noOfBikes ~ year,
-			cores = noOfCores,
-			family = negbinomial,
-			data = bikes)
-
-regressionModel_negbinom_location =
-	brm(noOfBikes ~ location,
-			cores = noOfCores,
-			family = negbinomial,
-			data = bikes)
-
-regressionModel_negbinom_all =
-	brm(noOfBikes ~ hours * temp * wday * wind * weather * month * year * location,
-			cores = noOfCores,
-			family = negbinomial,
-			data = bikes)
-
-save(regressionModel_negbinom_hours,
-     regressionModel_negbinom_temp,
-     regressionModel_negbinom_wday,
-     regressionModel_negbinom_wind,
-     regressionModel_negbinom_weather,
-     regressionModel_negbinom_month,
-     regressionModel_negbinom_year,
-     regressionModel_negbinom_location,
-     regressionModel_negbinom_all,
-     file = "results/Bayesian_negbinom_models.RData")
+			family = mixture(negbinomial, negbinomial),
+			data = bikes_commuter_neutor
+	)
 
