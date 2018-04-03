@@ -43,4 +43,8 @@ write.csv(bikes_commuter_neutor,
           file = "results/bikesCommuterNeutor.csv",
           row.names = FALSE)
 
+write.csv(bikes_commuter_neutor,
+          file = "results/bikesCommuterNeutorCopy.csv",
+          row.names = FALSE)
+
 quit(save = "no")
