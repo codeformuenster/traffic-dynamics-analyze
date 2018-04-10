@@ -32,7 +32,11 @@ bikes_commuter_neutor <-
   mutate(weekday = as.factor(wday(date, label = TRUE))) %>% 
   mutate(temperatureC = as.vector(scale(temperature, center = TRUE, scale = FALSE))) %>%
   mutate(windspeedC = as.vector(scale(windspeed, center = TRUE, scale = FALSE))) %>% 
-  filter(location == 'Neutor',
+  filter(!is.na(count),
+         !is.na(temperature),
+         !is.na(weather),
+         !is.na(windspeed),
+         location == 'Neutor',
          year == 2017,
          (hour == 7 | hour == 8),
          (weekday != "Sa" & weekday != "So"))
