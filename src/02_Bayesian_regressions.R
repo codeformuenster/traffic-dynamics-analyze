@@ -45,7 +45,7 @@ bikes_neutor <-
          (hour == 7 | hour == 8),
 				 (weekday != "Sat" & weekday != "Sun"))
 
-if(nrow(bikes_neutor) != 512) {
+if(nrow(bikes_neutor) != 513) {
   error <- "wrong amount of data"
   write.csv(error, file = "results/error.txt")
   stop("wrong amount of data")
