@@ -5,7 +5,7 @@
 ## (3) install clang instead of clang-3.6 which isn't available anymore
 ## (4) don't install texlive
 
-FROM codeformuenster/traffic-dynamics:v0.3.5
+FROM codeformuenster/traffic-dynamics:v0.3.6
 
 ## Mostly pirated from jrnold/docker-stan
 
