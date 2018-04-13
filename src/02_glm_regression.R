@@ -11,35 +11,7 @@ lapply(c("ggplot2", "dplyr", "RSQLite", "lubridate", "nortest",
        require, character.only = TRUE)
 
 # load data ####
-con <- dbConnect(SQLite(), dbname = "../data/database/traffic_data.sqlite")
-bikes <- dbGetQuery(conn = con, 
-                    "SELECT 
-                      location, count, date, hour, weather,
-                      temperature, windspeed 
-				 			      FROM bikes WHERE count != ''")
-dbDisconnect(con)
-
-
-# filtering data ####
-# filter data for valid observations
-bikes_commuter_neutor <-
-  bikes %>%
-  # generate factors
-  mutate(regen = weather == "Regen") %>% 
-  mutate(weather = as.factor(weather)) %>%
-  mutate(year = year(date)) %>% 
-  mutate(month = as.factor(month(date))) %>%
-  mutate(weekday = as.factor(wday(date, label = TRUE))) %>% 
-  mutate(temperatureC = as.vector(scale(temperature, center = TRUE, scale = FALSE))) %>%
-  mutate(windspeedC = as.vector(scale(windspeed, center = TRUE, scale = FALSE))) %>% 
-  filter(!is.na(count),
-         !is.na(temperature),
-         !is.na(weather),
-         !is.na(windspeed),
-         location == 'Neutor',
-         year == 2017,
-         (hour == 7 | hour == 8),
-         (weekday != "Sa" & weekday != "So"))
+source("src/01_load_data.R")
 
 # data distributions
 bikes_commuter_neutor %>% 
@@ -56,7 +28,7 @@ ks.test(bikes_commuter_neutor$count, "pnorm")
 # fit model ####
 # linear regression
 fit <-
-  glm(count ~ temperatureC + log(windspeed + 0.001) + regen + month,
+  glm(count ~ temperatureC + log(windspeed + 0.001) + rain + month,
      data = bikes_commuter_neutor)
 fit %>% summary
 fit %>% summary
