@@ -16,6 +16,8 @@ bikes <- dbGetQuery(conn = con,
                     "SELECT location, count, date, hour, weather, temperature, windspeed 
                     FROM bikes WHERE count != ''")
 
+# TODO: cars table does not have the weather in it in the latest release of traffic-dynamics;
+# there should be one table that contains the weather instead of appending it to cars/bikes tables
 cars <- dbGetQuery(conn = con, 
                    "SELECT location, count, date, hour, weather, temperature, windspeed
                    FROM cars WHERE count != '' AND location like '%01080%'")
