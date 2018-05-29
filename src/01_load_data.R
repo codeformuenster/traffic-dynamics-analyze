@@ -13,36 +13,38 @@ lapply(c("dplyr", "RSQLite", "lubridate"), require, character.only = TRUE)
 con <- dbConnect(SQLite(), dbname = "data/database/traffic_data.sqlite")
 
 bikes <- dbGetQuery(conn = con, 
-                    "SELECT location, count, date, hour, weather, temperature, windspeed 
-                    FROM bikes WHERE count != ''")
+                    "SELECT location, count, date, year, month, weekday, hour, weekend, weather, temperature, windspeed FROM bikes WHERE count != '';")
 
 # TODO: cars table does not have the weather in it in the latest release of traffic-dynamics;
 # there should be one table that contains the weather instead of appending it to cars/bikes tables
-cars <- dbGetQuery(conn = con, 
-                   "SELECT location, count, date, hour, weather, temperature, windspeed
-                   FROM cars WHERE count != '' AND location like '%01080%'")
+# cars <- dbGetQuery(conn = con, 
+                   # "SELECT location, count, date, hour, weather, temperature, windspeed
+                   # FROM cars WHERE count != '' AND location like '%01080%'")
 
 dbDisconnect(con)
+
+head(bikes)
 
 # filter data for valid observations
 bikes_neutor <-
   bikes %>%
   # generate factors
-  mutate(rain = weather == "Regen") %>% 
+  # TODO add other factors as rain, too
+  mutate(rain = (weather == "Regen")) %>% 
   mutate(weather = as.factor(weather)) %>%
-  mutate(year = year(date)) %>% 
-  mutate(month = as.factor(month(date))) %>%
-  mutate(weekday = as.factor(wday(date, label = TRUE))) %>% 
+  mutate(year = as.factor(year)) %>%
+  mutate(month = as.factor(month)) %>%
+  mutate(weekday = as.factor(weekday)) %>%
   mutate(temperatureC = as.vector(scale(temperature, center = TRUE, scale = FALSE))) %>%
-  mutate(windspeedC = as.vector(scale(windspeed, center = TRUE, scale = FALSE))) %>% 
+  mutate(windspeedC = as.vector(scale(windspeed, center = TRUE, scale = FALSE))) %>%
   filter(!is.na(count),
          !is.na(temperature),
          !is.na(weather),
          !is.na(windspeed),
+         !weekend,
          location == 'Neutor',
          year == 2017,
-         (hour == 7 | hour == 8),
-         (weekday != "Sat" & weekday != "Sun"))
+         (hour == 7 | hour == 8))
 
 if(nrow(bikes_neutor) != 513) {
   error <- "wrong amount of data"
@@ -51,20 +53,20 @@ if(nrow(bikes_neutor) != 513) {
   quit(save = "no")
 }
 
-cars_neutor <-
-  cars %>%
-  # generate factors
-  mutate(rain = weather == "Regen") %>% 
-  mutate(weather = as.factor(weather)) %>%
-  mutate(year = year(date)) %>% 
-  mutate(month = as.factor(month(date))) %>%
-  mutate(weekday = as.factor(wday(date, label = TRUE))) %>% 
-  mutate(temperatureC = as.vector(scale(temperature, center = TRUE, scale = FALSE))) %>%
-  mutate(windspeedC = as.vector(scale(windspeed, center = TRUE, scale = FALSE))) %>% 
-  filter(!is.na(count),
-         !is.na(temperature),
-         !is.na(weather),
-         !is.na(windspeed),
-         year == 2017,
-         (hour == 7 | hour == 8),
-         (weekday != "Sat" & weekday != "Sun"))
+# cars_neutor <-
+#   cars %>%
+#   # generate factors
+#   mutate(rain = weather == "Regen") %>% 
+#   mutate(weather = as.factor(weather)) %>%
+#   mutate(year = year(date)) %>% 
+#   mutate(month = as.factor(month(date))) %>%
+#   mutate(weekday = as.factor(wday(date, label = TRUE))) %>% 
+#   mutate(temperatureC = as.vector(scale(temperature, center = TRUE, scale = FALSE))) %>%
+#   mutate(windspeedC = as.vector(scale(windspeed, center = TRUE, scale = FALSE))) %>% 
+#   filter(!is.na(count),
+#          !is.na(temperature),
+#          !is.na(weather),
+#          !is.na(windspeed),
+#          year == 2017,
+#          (hour == 7 | hour == 8),
+#          (weekday != "Sat" & weekday != "Sun"))

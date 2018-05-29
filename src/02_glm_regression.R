@@ -14,22 +14,22 @@ lapply(c("ggplot2", "dplyr", "RSQLite", "lubridate", "nortest",
 source("src/01_load_data.R")
 
 # data distributions
-bikes_commuter_neutor %>% 
+bikes_neutor %>% 
   # pull(count) %>% 
   pull(temperatureC) %>%
   # log() %>% 
   hist()
 
 # distribution of target variable
-ad.test(bikes_commuter_neutor$count)
-pearson.test(bikes_commuter_neutor$count)
-ks.test(bikes_commuter_neutor$count, "pnorm")
+ad.test(bikes_neutor$count)
+pearson.test(bikes_neutor$count)
+ks.test(bikes_neutor$count, "pnorm")
 
 # fit model ####
 # linear regression
 fit <-
   glm(count ~ temperatureC + log(windspeed + 0.001) + rain + month,
-     data = bikes_commuter_neutor)
+     data = bikes_neutor)
 fit %>% summary
 fit %>% summary
 
