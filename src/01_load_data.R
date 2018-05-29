@@ -30,11 +30,15 @@ bikes_neutor <-
   bikes %>%
   # generate factors
   # TODO add other factors as rain, too
-  mutate(rain = (weather == "Regen")) %>% 
+  mutate(rain = (weather == "Gewitter" |
+									weather == "Regen" |
+									weather == "Schnee" |
+									weather == "Schneeregen")) %>% 
   mutate(weather = as.factor(weather)) %>%
   mutate(year = as.factor(year)) %>%
   mutate(month = as.factor(month)) %>%
   mutate(weekday = as.factor(weekday)) %>%
+  mutate(weekend = as.logical(weekend)) %>%
   mutate(temperatureC = as.vector(scale(temperature, center = TRUE, scale = FALSE))) %>%
   mutate(windspeedC = as.vector(scale(windspeed, center = TRUE, scale = FALSE))) %>%
   filter(!is.na(count),
