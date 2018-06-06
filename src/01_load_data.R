@@ -48,14 +48,27 @@ bikes_neutor <-
          !weekend,
          location == 'Neutor',
          year == 2017,
+         # exclude public holidays 2017
+         date != "2017-01-01",
+         date != "2017-04-14",
+         date != "2017-04-17",
+         date != "2017-05-01",
+         date != "2017-05-25",
+         date != "2017-06-05",
+         date != "2017-06-15",
+         date != "2017-10-03",
+         date != "2017-10-31",
+         date != "2017-11-01",
+         date != "2017-12-25",
+         date != "2017-12-26",
          (hour == 7 | hour == 8))
 
-if(nrow(bikes_neutor) != 513) {
-  error <- "wrong amount of data"
-  write.csv(error, file = "results/error.txt")
-  stop("wrong amount of data")
-  quit(save = "no")
-}
+# if(nrow(bikes_neutor) != (513 - 12)) {
+#   error <- "wrong amount of data"
+#   write.csv(error, file = "results/error.txt")
+#   stop("wrong amount of data")
+#   quit(save = "no")
+# }
 
 # cars_neutor <-
 #   cars %>%

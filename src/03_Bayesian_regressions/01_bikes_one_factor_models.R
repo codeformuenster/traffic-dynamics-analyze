@@ -21,6 +21,18 @@ bike_model_like_NHST =
       family = gaussian,
       data = bikes_neutor)
 
+
+bike_model_like_NHST_negbinom = 
+  brm(count ~ temperatureC + windspeedC + rain + month,
+      family = negbinomial,
+      data = bikes_neutor)
+
+bike_model_close_to_NHST = 
+  brm(count ~ temperatureC + windspeedC + rain + month,
+      family = mixture(gaussian, gaussian),
+      data = bikes_neutor)
+
+
 ##### simple bikes models ######
 
 bikes_model_temperature = 
